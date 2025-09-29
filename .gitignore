@@ -2,3 +2,6 @@
 .vscode/
 build/*
 .log
+TODO
+*.png
+*.jpg
