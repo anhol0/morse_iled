@@ -1,2 +1,2 @@
 all:
-	gcc main.c -Wall -o ./build/morse-led
+	gcc main.c -Wall -g -o ./build/morse-led
