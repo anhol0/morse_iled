@@ -1,16 +1,22 @@
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <strings.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include "./iled-daemon.c"
 
 #define MAX_LETTERS 256
 #define MORSE_CODE_CHAR_LENGTH 16
 #define MAX_BUF 1024
+
+void sendMessageThroughPipe(const char *pipeName, char *data) {
+  mkfifo(pipeName, 0666);
+  int fd = open(pipeName, O_WRONLY);
+  if (fd < 0) {
+    printf("Error opening PIPE!\n");
+    exit(1);
+  }
+  write(fd, data, strlen(data));
+  close(fd);
+  free(data);
+}
 
 typedef struct {
   char letters[MAX_LETTERS];
@@ -88,22 +94,11 @@ int main(int argc, char *argv[]) {
   }
   myCodes = fillStructure(dict);
   printf("Number of characters in a dictionary: %d\n", myCodes.count);
-  char *end = getMorseCode(msg, myCodes);
-  printf("Encoded message in morde code: \n%s\n", end);
+  char *data = getMorseCode(msg, myCodes);
+  printf("Encoded message in morde code: \n%s\n", data);
 
   // Sending data to daemon from the client through pipe
   const char *pipe = "/tmp/pipe";
-  mkfifo(pipe, 0666);
-  int fd = open(pipe, O_WRONLY);
-  if (fd < 0) {
-    printf("Error opening PIPE!\n");
-    exit(1);
-  }
-  flock(fd, LOCK_UN);
-  write(fd, end, strlen(end));
-  close(fd);
-  sleep(1);
-  unlink(pipe);
-
-  free(end);
+  sendMessageThroughPipe(pipe, data);
+  return 0;
 }
