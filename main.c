@@ -1,12 +1,18 @@
 #include <string.h>
+#include <unistd.h>
 
 #include "./iled-daemon.c"
 
 #define MAX_LETTERS 256
 #define MORSE_CODE_CHAR_LENGTH 16
 #define MAX_BUF 1024
+#define LOCK_CLIENT "/tmp/iled_client.lock"
 
 void sendMessageThroughPipe(const char *pipeName, char *data) {
+  if (isLocked(LOCK_CLIENT)) {
+    printf("One client instance already exists!\n");
+    exit(1);
+  }
   mkfifo(pipeName, 0666);
   int fd = open(pipeName, O_WRONLY);
   if (fd < 0) {
@@ -14,7 +20,9 @@ void sendMessageThroughPipe(const char *pipeName, char *data) {
     exit(1);
   }
   write(fd, data, strlen(data));
+  sleep(2);
   close(fd);
+  unlink(LOCK_CLIENT);
   free(data);
 }
 
@@ -45,6 +53,9 @@ char *getMorseCode(char *message, morseCode code) {
   }
   morseCode[0] = '\0';
   for (int i = 0; i < strlen(message); i++) {
+    if (message[i] == ' ') {
+      strcat(morseCode, "_ ");
+    }
     for (int j = 0; j < code.count; j++) {
       if (message[i] == code.letters[j]) {
         strcat(morseCode, code.codes[j]);
@@ -62,6 +73,11 @@ int main(int argc, char *argv[]) {
   char *msg;
   FILE *dict;
   morseCode myCodes;
+  if (argc < 2) {
+    fprintf(stderr, "Usage: %s [-s] string to convert [-d] dictionary to use\n",
+            argv[0]);
+    exit(EXIT_FAILURE);
+  }
   while ((opts = getopt(argc, argv, "ds:f:")) != -1) {
     switch (opts) {
     // Paring argument of the string
@@ -92,6 +108,8 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
     }
   }
+
+  // Generating morse code
   myCodes = fillStructure(dict);
   printf("Number of characters in a dictionary: %d\n", myCodes.count);
   char *data = getMorseCode(msg, myCodes);
