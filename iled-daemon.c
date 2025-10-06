@@ -13,12 +13,15 @@
 #define LOCK_FILE "/var/run/iled_daemon.lock"
 
 // Keeping only one instance of the daemon with flock
-int isLocked(char* lockFile) {
+int isLocked(char *lockFile) {
   int lockFd = open(lockFile, O_RDWR | O_CREAT, 0644);
+  // Checking is lock file creation/opening was successful
   if (lockFd == -1) {
     perror("Open lock file");
     exit(1);
   }
+  // Trying to acquire lock file. If failed - return 1 to tell that 
+  // client/daemon is already running
   if (flock(lockFd, LOCK_EX | LOCK_NB) == -1) {
     if (errno == EWOULDBLOCK) {
       close(lockFd);
@@ -27,6 +30,7 @@ int isLocked(char* lockFile) {
     perror("flock");
     exit(1);
   }
+  // Write PID of the daemon/client to the lock file
   if (ftruncate(lockFd, 0) == -1) {
     perror("ftruncate");
     close(lockFd);
@@ -75,7 +79,7 @@ void iledDaemon() {
       ssize_t n = read(fd, buf, MAX_BUF);
       if (n > 0) {
         buf[n] = '\0';
-        printf("Recieved: %s\n", buf);
+        printf("Received: %s\n", buf);
       }
     }
   }

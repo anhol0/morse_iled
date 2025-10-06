@@ -8,6 +8,54 @@
 #define MAX_BUF 1024
 #define LOCK_CLIENT "/tmp/iled_client.lock"
 
+// Morse code structure
+typedef struct {
+  char letters[MAX_LETTERS];
+  char codes[MAX_LETTERS][MORSE_CODE_CHAR_LENGTH];
+  int count;
+} morseCode;
+
+// Fill morse code structure with letters and codes from given dictionary
+morseCode fillStructure(FILE *dict) {
+  morseCode code;
+  code.count = 0;
+  while (code.count < MAX_LETTERS &&
+         fscanf(dict, "%1s %15s", &code.letters[code.count],
+                code.codes[code.count]) == 2) {
+    code.count++;
+  }
+  fclose(dict);
+  return code;
+}
+
+// Convert input string to the morse code
+char *getMorseCode(char *message, morseCode code) {
+  int maxLen = strlen(message) * MORSE_CODE_CHAR_LENGTH + 1;
+  char *morseCode = malloc(maxLen);
+  if (!morseCode) {
+    printf("Memory allocation error\n");
+    exit(1);
+  }
+
+  morseCode[0] = '\0';
+  for (int i = 0; i < strlen(message); i++) {
+    if (message[i] == ' ') {
+      strcat(morseCode, "_ ");
+    }
+    for (int j = 0; j < code.count; j++) {
+      if (message[i] == code.letters[j]) {
+        strcat(morseCode, code.codes[j]);
+        strcat(morseCode, " ");
+      }
+    }
+  }
+  printf("\n");
+
+  return morseCode;
+}
+
+// Sending the message through named pipe
+// And checking whether file lock is on or off
 void sendMessageThroughPipe(const char *pipeName, char *data) {
   if (isLocked(LOCK_CLIENT)) {
     printf("One client instance already exists!\n");
@@ -24,48 +72,6 @@ void sendMessageThroughPipe(const char *pipeName, char *data) {
   close(fd);
   unlink(LOCK_CLIENT);
   free(data);
-}
-
-typedef struct {
-  char letters[MAX_LETTERS];
-  char codes[MAX_LETTERS][MORSE_CODE_CHAR_LENGTH];
-  int count;
-} morseCode;
-
-morseCode fillStructure(FILE *dict) {
-  morseCode code;
-  code.count = 0;
-  while (code.count < MAX_LETTERS &&
-         fscanf(dict, "%1s %15s", &code.letters[code.count],
-                code.codes[code.count]) == 2) {
-    code.count++;
-  }
-  fclose(dict);
-  return code;
-}
-
-char *getMorseCode(char *message, morseCode code) {
-  int maxLen = strlen(message) * MORSE_CODE_CHAR_LENGTH + 1;
-  char *morseCode = malloc(maxLen);
-  if (!morseCode) {
-    printf("Memory allocation error\n");
-    exit(1);
-  }
-  morseCode[0] = '\0';
-  for (int i = 0; i < strlen(message); i++) {
-    if (message[i] == ' ') {
-      strcat(morseCode, "_ ");
-    }
-    for (int j = 0; j < code.count; j++) {
-      if (message[i] == code.letters[j]) {
-        strcat(morseCode, code.codes[j]);
-        strcat(morseCode, " ");
-      }
-    }
-  }
-  printf("\n");
-
-  return morseCode;
 }
 
 int main(int argc, char *argv[]) {
@@ -85,6 +91,7 @@ int main(int argc, char *argv[]) {
       iledDaemon();
       break;
     }
+    // Parsing string to convert to the morse code
     case 's': {
       msg = optarg;
       printf("message to encode: %s\n", msg);
@@ -101,6 +108,7 @@ int main(int argc, char *argv[]) {
       break;
     }
 
+    // If incorrect argument is provided
     default:
       fprintf(stderr,
               "Usage: %s [-s] string to convert [-d] dictionary to use\n",
