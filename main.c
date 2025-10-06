@@ -1,6 +1,3 @@
-#include <string.h>
-#include <unistd.h>
-
 #include "./iled-daemon.c"
 
 #define MAX_LETTERS 256
@@ -68,7 +65,6 @@ void sendMessageThroughPipe(const char *pipeName, char *data) {
     exit(1);
   }
   write(fd, data, strlen(data));
-  sleep(2);
   close(fd);
   unlink(LOCK_CLIENT);
   free(data);

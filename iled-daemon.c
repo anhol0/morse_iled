@@ -2,11 +2,15 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/file.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define TIME_UNIT                                                              \
+  200000 // Time unit is the value of dot in morse code. Dash is three time
+         // units
 #define MAX_BUF 1024
 #define CONTROL_LED "/sys/class/leds/tpacpi::lid_logo_dot/brightness"
 #define PIPE_NAME "/tmp/pipe"
@@ -20,7 +24,7 @@ int isLocked(char *lockFile) {
     perror("Open lock file");
     exit(1);
   }
-  // Trying to acquire lock file. If failed - return 1 to tell that 
+  // Trying to acquire lock file. If failed - return 1 to tell that
   // client/daemon is already running
   if (flock(lockFd, LOCK_EX | LOCK_NB) == -1) {
     if (errno == EWOULDBLOCK) {
@@ -40,6 +44,57 @@ int isLocked(char *lockFile) {
   return 0;
 }
 
+void toggleTheLed(int timing, char *state) {
+  int ledFd = open(CONTROL_LED, O_WRONLY);
+  if (ledFd == -1) {
+    perror("Open LED");
+    exit(1);
+  }
+  write(ledFd, state, 1);
+  close(ledFd);
+  usleep(timing);
+}
+
+void morseTextToLedBlink(char buffer[], int lengthOfBuffer) {
+  toggleTheLed(TIME_UNIT, 0);
+  for (int i = 0; i < lengthOfBuffer; i++) {
+    switch (buffer[i]) {
+    case '.': {
+      if (buffer[i + 1] == '_' || buffer[i + 1] == ' ') {
+        toggleTheLed(TIME_UNIT, "1");
+        break;
+      }
+      toggleTheLed(TIME_UNIT, "1");
+      toggleTheLed(TIME_UNIT, "0");
+      break;
+    }
+
+    case '-': {
+      if (buffer[i + 1] == '_' || buffer[i + 1] == ' ') {
+        toggleTheLed(3 * TIME_UNIT, "1");
+        break;
+      }
+      toggleTheLed(3 * TIME_UNIT, "1");
+      toggleTheLed(TIME_UNIT, "0");
+      break;
+    }
+
+    case ' ': {
+      toggleTheLed(3 * TIME_UNIT, "0");
+      break;
+    }
+
+    case '_': {
+      toggleTheLed(7 * TIME_UNIT, "0");
+      break;
+    }
+
+    default:
+      break;
+    }
+  }
+}
+
 void iledDaemon() {
   // file descriptor, pipe name and character buffer initialization
   if (isLocked(LOCK_FILE)) {
@@ -49,7 +104,7 @@ void iledDaemon() {
   printf("Daemon started\n");
   int fd;
   char *pipe = PIPE_NAME;
-  char buf[MAX_BUF];
+  char morseCodeBuffer[MAX_BUF];
 
   // Creating named pipe with prw-rw-rw- privileges
   mkfifo(pipe, 0666);
@@ -76,10 +131,12 @@ void iledDaemon() {
     }
     // If file descriptor is set in a bit mask - continue
     if (FD_ISSET(fd, &set)) {
-      ssize_t n = read(fd, buf, MAX_BUF);
+      ssize_t n = read(fd, morseCodeBuffer, MAX_BUF);
       if (n > 0) {
-        buf[n] = '\0';
-        printf("Received: %s\n", buf);
+        morseCodeBuffer[n] = '\0';
+        printf("Received: %s\n", morseCodeBuffer);
+        morseTextToLedBlink(morseCodeBuffer, strlen(morseCodeBuffer));
+        toggleTheLed(10, "1");
       }
     }
   }
