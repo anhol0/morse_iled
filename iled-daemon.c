@@ -44,6 +44,8 @@ int isLocked(char *lockFile) {
   return 0;
 }
 
+// Toggle the led according to input given
+// Time to keep led on, state of the led
 void toggleTheLed(int timing, char *state) {
   int ledFd = open(CONTROL_LED, O_WRONLY);
   if (ledFd == -1) {
@@ -55,10 +57,14 @@ void toggleTheLed(int timing, char *state) {
   usleep(timing);
 }
 
+// Blink the Led on the back of the laptop
+// according to the pattern provided by user input,
+// encoded in morse code
 void morseTextToLedBlink(char buffer[], int lengthOfBuffer) {
   toggleTheLed(TIME_UNIT, 0);
   for (int i = 0; i < lengthOfBuffer; i++) {
     switch (buffer[i]) {
+      // Timing for dot is one TIME UNIT
     case '.': {
       if (buffer[i + 1] == '_' || buffer[i + 1] == ' ') {
         toggleTheLed(TIME_UNIT, "1");
@@ -68,7 +74,7 @@ void morseTextToLedBlink(char buffer[], int lengthOfBuffer) {
       toggleTheLed(TIME_UNIT, "0");
       break;
     }
-
+      // Timing for dot is three TIME UNITS
     case '-': {
       if (buffer[i + 1] == '_' || buffer[i + 1] == ' ') {
         toggleTheLed(3 * TIME_UNIT, "1");
@@ -79,11 +85,13 @@ void morseTextToLedBlink(char buffer[], int lengthOfBuffer) {
       break;
     }
 
+      // Timing between letters is 3 TIME UNITS
     case ' ': {
       toggleTheLed(3 * TIME_UNIT, "0");
       break;
     }
 
+      // Timing between words is seven TIME UNITS
     case '_': {
       toggleTheLed(7 * TIME_UNIT, "0");
       break;
