@@ -1,6 +1,6 @@
-#include <signal.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -130,11 +130,13 @@ void killTheDaemon(char *pipe) {
   }
   printf("Killing daemon with PID of %s\n", pidBuf);
   int killSig = kill(atoi(pidBuf), SIGTERM);
-  if(killSig == -1) {
+  if (killSig == -1) {
     printf("Error killing process: %d\n", errno);
   }
   unlink(pipe);
   remove(LOCK_FILE);
+  close(lockFileFd);
+  toggleTheLed(0, "1");
   exit(0);
 }
 
