@@ -61,7 +61,7 @@ void toggleTheLed(int timing, char *state) {
 // according to the pattern provided by user input,
 // encoded in morse code
 void morseTextToLedBlink(char buffer[], int lengthOfBuffer) {
-  toggleTheLed(TIME_UNIT, 0);
+  toggleTheLed(TIME_UNIT, "0");
   for (int i = 0; i < lengthOfBuffer; i++) {
     switch (buffer[i]) {
       // Timing for dot is one TIME UNIT
@@ -101,6 +101,7 @@ void morseTextToLedBlink(char buffer[], int lengthOfBuffer) {
       break;
     }
   }
+  toggleTheLed(0, "1");
 }
 
 void iledDaemon() {
@@ -145,10 +146,8 @@ void iledDaemon() {
       ssize_t n = read(fd, morseCodeBuffer, MAX_BUF);
       // printf("Number of bytes read: %zd\n", n);
       if (n > 0) {
-        morseCodeBuffer[n] = '\0';
         printf("Received: %s\n", morseCodeBuffer);
         morseTextToLedBlink(morseCodeBuffer, strlen(morseCodeBuffer));
-        toggleTheLed(10, "1");
         close(fd);
         fd = open(pipe, O_RDONLY | O_NONBLOCK);
         if (fd < 0) {
