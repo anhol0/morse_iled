@@ -58,10 +58,10 @@ void sendMessageThroughPipe(const char *pipeName, char *data) {
     printf("One client instance already exists!\n");
     exit(1);
   }
-  mkfifo(pipeName, 0666);
+  // mkfifo(pipeName, 0666);
   int fd = open(pipeName, O_WRONLY);
   if (fd < 0) {
-    printf("Error opening PIPE!\n");
+    printf("Error opening PIPE! %d\n", errno);
     exit(1);
   }
   write(fd, data, strlen(data));

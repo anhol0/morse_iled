@@ -114,10 +114,13 @@ void iledDaemon() {
   char *pipe = PIPE_NAME;
   char morseCodeBuffer[MAX_BUF];
 
+  unlink(pipe);
   // Creating named pipe with prw-rw-rw- privileges
+  int umaskOld = umask(0);
   mkfifo(pipe, 0666);
+  umask(umaskOld);
   // assign value to file descriptor and check if it can be opened
-  fd = open(pipe, O_RDONLY);
+  fd = open(pipe, O_RDONLY | O_NONBLOCK);
   if (fd < 0) {
     perror("open");
     exit(1);
@@ -140,11 +143,18 @@ void iledDaemon() {
     // If file descriptor is set in a bit mask - continue
     if (FD_ISSET(fd, &set)) {
       ssize_t n = read(fd, morseCodeBuffer, MAX_BUF);
+      // printf("Number of bytes read: %zd\n", n);
       if (n > 0) {
         morseCodeBuffer[n] = '\0';
         printf("Received: %s\n", morseCodeBuffer);
         morseTextToLedBlink(morseCodeBuffer, strlen(morseCodeBuffer));
         toggleTheLed(10, "1");
+        close(fd);
+        fd = open(pipe, O_RDONLY | O_NONBLOCK);
+        if (fd < 0) {
+          perror("reopen");
+          exit(1);
+        }
       }
     }
   }
