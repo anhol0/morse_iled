@@ -66,3 +66,7 @@ c -.-.
 ```
 
 And so on
+
+## Credits
+1. [GNU Project](https://www.gnu.org/) for **make** and **gcc**
+2. [Linux kernel](https://github.com/torvalds/linux) for **thinkpad_acpi**
