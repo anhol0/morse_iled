@@ -6,6 +6,7 @@
 #include <sys/file.h>
 #include <sys/select.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #define TIME_UNIT                                                              \
@@ -104,6 +105,16 @@ void morseTextToLedBlink(char buffer[], int lengthOfBuffer) {
   toggleTheLed(0, "1");
 }
 
+void readBlkAndBlink(int fd, char buf[], char *pipe) {
+  ssize_t n;
+  while ((n = read(fd, buf, MAX_BUF)) > 0) {
+    buf[n] = '\0';
+    printf("Number of bytes read: %zd\n", n);
+    printf("Received: '%s'\n", buf);
+    morseTextToLedBlink(buf, strlen(buf));
+  }
+}
+
 void iledDaemon() {
   // file descriptor, pipe name and character buffer initialization
   if (isLocked(LOCK_FILE)) {
@@ -143,17 +154,12 @@ void iledDaemon() {
     }
     // If file descriptor is set in a bit mask - continue
     if (FD_ISSET(fd, &set)) {
-      ssize_t n = read(fd, morseCodeBuffer, MAX_BUF);
-      // printf("Number of bytes read: %zd\n", n);
-      if (n > 0) {
-        printf("Received: %s\n", morseCodeBuffer);
-        morseTextToLedBlink(morseCodeBuffer, strlen(morseCodeBuffer));
-        close(fd);
-        fd = open(pipe, O_RDONLY | O_NONBLOCK);
-        if (fd < 0) {
-          perror("reopen");
-          exit(1);
-        }
+      readBlkAndBlink(fd, morseCodeBuffer, pipe);
+      close(fd);
+      fd = open(pipe, O_RDONLY | O_NONBLOCK);
+      if (fd < 0) {
+        perror("reopen");
+        exit(1);
       }
     }
   }

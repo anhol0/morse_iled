@@ -1,8 +1,8 @@
 #include "./iled-daemon.c"
 
+
 #define MAX_LETTERS 256
 #define MORSE_CODE_CHAR_LENGTH 16
-#define MAX_BUF 1024
 #define LOCK_CLIENT "/tmp/iled_client.lock"
 
 // Morse code structure
