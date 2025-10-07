@@ -1,9 +1,19 @@
 #include "./iled-daemon.c"
-
+#include <stdio.h>
+#include <string.h>
 
 #define MAX_LETTERS 256
 #define MORSE_CODE_CHAR_LENGTH 16
+#define PIPE "/tmp/pipe"
 #define LOCK_CLIENT "/tmp/iled_client.lock"
+
+static const char helpString[] =
+    "morse_iled - program to display morse code on a ThinkPad i-led on the lid\n"
+    "-s \"YOUR MESSAGE\"            Message that will be converted to moese code (required)\n"
+    "-f <path to config file>     Configuration file that program will get codes and letters from (required)\n"
+    "-d                           !!SUPERUSER ACCESS ONLY!! Start program in daemon mode. Not compatible with any of args above ()\n"
+    "-h                           Show this message\n"
+    "kill                         !!SUPERUSER ACCESS ONLY!! Kill the daemon\n";
 
 // Morse code structure
 typedef struct {
@@ -74,19 +84,31 @@ int main(int argc, char *argv[]) {
   int opts;
   char *msg;
   FILE *dict;
+  const char *pipe = PIPE;
   morseCode myCodes;
   if (argc < 2) {
     fprintf(stderr, "Usage: %s [-s] string to convert [-d] dictionary to use\n",
             argv[0]);
     exit(EXIT_FAILURE);
   }
-  while ((opts = getopt(argc, argv, "ds:f:")) != -1) {
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-d") == 0) {
+      iledDaemon();
+      exit(0);
+    }
+    if (strcmp(argv[i], "-h") == 0) {
+      printf("%s", helpString);
+      exit(0);
+    }
+    if (strcmp(argv[i], "kill") == 0) {
+      killTheDaemon(PIPE);
+    }
+  }
+
+  while ((opts = getopt(argc, argv, "s:f:")) != -1) {
     switch (opts) {
     // Paring argument of the string
-    case 'd': {
-      iledDaemon();
-      break;
-    }
     // Parsing string to convert to the morse code
     case 's': {
       msg = optarg;
@@ -120,7 +142,6 @@ int main(int argc, char *argv[]) {
   printf("Encoded message in morde code: \n%s\n", data);
 
   // Sending data to daemon from the client through pipe
-  const char *pipe = "/tmp/pipe";
   sendMessageThroughPipe(pipe, data);
   return 0;
 }

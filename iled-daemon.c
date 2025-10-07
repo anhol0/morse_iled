@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -113,6 +114,28 @@ void readBlkAndBlink(int fd, char buf[], char *pipe) {
     printf("Received: '%s'\n", buf);
     morseTextToLedBlink(buf, strlen(buf));
   }
+}
+
+void killTheDaemon(char *pipe) {
+  int lockFileFd = open(LOCK_FILE, O_RDONLY);
+  char pidBuf[6];
+  if (lockFileFd == -1) {
+    perror("Opening lock file");
+    exit(1);
+  }
+  int bytesRead = read(lockFileFd, pidBuf, sizeof(pidBuf));
+  if (bytesRead == -1) {
+    perror("Getting PID");
+    exit(1);
+  }
+  printf("Killing daemon with PID of %s\n", pidBuf);
+  int killSig = kill(atoi(pidBuf), SIGTERM);
+  if(killSig == -1) {
+    printf("Error killing process: %d\n", errno);
+  }
+  unlink(pipe);
+  remove(LOCK_FILE);
+  exit(0);
 }
 
 void iledDaemon() {
