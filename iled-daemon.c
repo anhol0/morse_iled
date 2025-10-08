@@ -123,12 +123,13 @@ void killTheDaemon(char *pipe) {
     perror("Opening lock file");
     exit(1);
   }
+
   int bytesRead = read(lockFileFd, pidBuf, sizeof(pidBuf));
   if (bytesRead == -1) {
     perror("Getting PID");
     exit(1);
   }
-  printf("Killing daemon with PID of %s\n", pidBuf);
+  printf("Killing daemon with PID of %s", pidBuf);
   int killSig = kill(atoi(pidBuf), SIGTERM);
   if (killSig == -1) {
     printf("Error killing process: %d\n", errno);
@@ -136,6 +137,7 @@ void killTheDaemon(char *pipe) {
   unlink(pipe);
   remove(LOCK_FILE);
   close(lockFileFd);
+  //Restoring LED state
   toggleTheLed(0, "1");
   exit(0);
 }

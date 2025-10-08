@@ -47,12 +47,11 @@ char *getMorseCode(char *message, morseCode code) {
   morseCode[0] = '\0';
   for (int i = 0; i < strlen(message); i++) {
     if (message[i] == ' ') {
-      strcat(morseCode, "_ ");
+      strcat(morseCode, "_");
     }
     for (int j = 0; j < code.count; j++) {
       if (message[i] == code.letters[j]) {
         strcat(morseCode, code.codes[j]);
-        strcat(morseCode, " ");
       }
     }
   }
